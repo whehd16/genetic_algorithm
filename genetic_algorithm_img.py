@@ -18,6 +18,7 @@ class chromoSome:
         self.real_img = real_img
         self.img_size = real_img.shape
         self.max_shapes = max_shapes
+        self.shapes_list = []
 
         if chromo_data is None:
             self.create_random_img()
@@ -42,8 +43,7 @@ class chromoSome:
         self.img = np.zeros(self.img_size, np.uint8)
         for _ in range(self.max_shapes):
             random_assign = random.choice([chromoSome.assign_circle, chromoSome.assign_polygon])
-            random_assign(self.img, self.max_shapes, self.img_size)
-        # self.assign_circle()
+            self.shapes_list.append(random_assign(self.img, self.max_shapes, self.img_size))
 
     def assign_circle(img, max_shapes, img_size):
         #초기해일 경우에 빈 프레임 들어옴
@@ -57,31 +57,32 @@ class chromoSome:
         #radius   = np.random.randint(0, int(img_size[0] / (1.1*res)))
         opacity  = np.random.rand(1)[0]
         color    = chromoSome.get_bgr_color()
-        cv2.circle(overlay, (center_x, center_y), radius, color, -1)
-        cv2.addWeighted(overlay, opacity, img, 1 - opacity, 0, img) # img에 합쳐서 반환
+        cv2.circle(overlay, (center_x, center_y), radius, color, -1) #img.copy에 중심x 중심y 반지름 색 그림.
+        cv2.addWeighted(overlay, opacity, img, 1 - opacity, 0, img)  # img에 opacity, 1-opacity 만큼의 비율로 합쳐서 반환
+
+        return ["circle", None, center_x, center_y, radius, opacity, color] #원의 중심 좌표, 반지름, 투명도, 색상 반환
 
     def assign_polygon(img, max_shapes, img_size):
         pts = []
         point = [np.random.randint(0, img_size[1]), np.random.randint(0, img_size[0])]
         pts.append(point)
 
-        #mutation으로 추가할 도형 개수
         n_shapes = np.random.randint(0, max_shapes)
 
         for i in range(n_shapes):
             new_point = [point[0] + np.random.randint(-1, 2) * np.random.randint(0, int(img_size[1] / 4)), point[1] + np.random.randint(-1, 2) * np.random.randint(0, int(img_size[0] / 4))]
             pts.append(new_point)
 
-
         pts 	 = np.array(pts)
         pts 	 = pts.reshape((-1, 1, 2))
         opacity  = np.random.rand(1)[0]
         color    = chromoSome.get_bgr_color()
 
-
         overlay  = img.copy()
         cv2.fillPoly(overlay, [pts], color, 8)
-        cv2.addWeighted(overlay, opacity, img, 1 - opacity, 0 ,img)
+        cv2.addWeighted(overlay, opacity, img, 1 - opacity, 0, img)
+
+        return ["polygon", pts, None, None, None, opacity, color]
 
     def get_bgr_color():
         blue  = np.random.randint(0, 255)

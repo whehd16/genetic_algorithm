@@ -6,6 +6,13 @@ import cv2, time, argparse
 # 돌연변이 생성 비율
 MUTATION_PROB = 0.1
 
+# 각 세대는 100개의 해로 구성되도록 수정
+# 각 해는 100개의 원 또는 폴리곤으로 구성되어 있다.
+# 이때 100의 중심점 반지름 등을 전부 기억해서 100개의 도형이 유지되도록 하는 것이 목적
+# 적합도는 원본 사진과의 디스턴스로 구할 예정이고
+# Xover 방식은 미정
+# mutaion은 도형 및 색상 대체.
+
 class chromoSome:
     def __init__(self, real_img, max_shapes=100, chromo_data=None):
         self.real_img = real_img
@@ -31,26 +38,27 @@ class chromoSome:
         return score
 
     def create_random_img(self):
+        #초기해 생성을 위한 코드
         self.img = np.zeros(self.img_size, np.uint8)
-        random_assign = random.choice([chromoSome.assign_circle, chromoSome.assign_polygon])
-        random_assign(self.img, self.max_shapes, self.img_size)
+        for _ in range(self.max_shapes):
+            random_assign = random.choice([chromoSome.assign_circle, chromoSome.assign_polygon])
+            random_assign(self.img, self.max_shapes, self.img_size)
         # self.assign_circle()
 
-
     def assign_circle(img, max_shapes, img_size):
+        #초기해일 경우에 빈 프레임 들어옴
+
         overlay  = img.copy()
         #mutation으로 추가할 도형 개수
-        n_shapes = np.random.randint(0, max_shapes)
 
-        for _ in range(n_shapes):
-            center_x = np.random.randint(0, img_size[1])
-            center_y = np.random.randint(0, img_size[0])
-            radius = np.random.randint(0, img_size[0]/4)
-            #radius   = np.random.randint(0, int(img_size[0] / (1.1*res)))
-            opacity  = np.random.rand(1)[0]
-            color    = chromoSome.get_bgr_color()
-            cv2.circle(overlay, (center_x, center_y), radius, color, -1)
-            cv2.addWeighted(overlay, opacity, img, 1 - opacity, 0, img)
+        center_x = np.random.randint(0, img_size[1])
+        center_y = np.random.randint(0, img_size[0])
+        radius = np.random.randint(0, img_size[0]/4)
+        #radius   = np.random.randint(0, int(img_size[0] / (1.1*res)))
+        opacity  = np.random.rand(1)[0]
+        color    = chromoSome.get_bgr_color()
+        cv2.circle(overlay, (center_x, center_y), radius, color, -1)
+        cv2.addWeighted(overlay, opacity, img, 1 - opacity, 0, img) # img에 합쳐서 반환
 
     def assign_polygon(img, max_shapes, img_size):
         pts = []
@@ -203,8 +211,11 @@ def load_pickle(filepath):
 
 
 def main(file_path, n_population, n_generation):
+    #원본 이미지 읽음
     IMA_ARR = cv2.imread(file_path)
+    #적합도 리스트 생성
     fitness_list = list()
+    #초기해 생성 n_population 만큼 생성하고, choromSome 인스턴스 생성
     initial_pop = [chromoSome(real_img=IMA_ARR) for _ in range(n_population)]
     gen = Generation(initial_pop)
 

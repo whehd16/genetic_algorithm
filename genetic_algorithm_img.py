@@ -14,11 +14,11 @@ MUTATION_PROB = 0.1
 # mutaion은 도형 및 색상 대체.
 
 class chromoSome:
-    def __init__(self, real_img, max_shapes=100, chromo_data=None):
+    def __init__(self, real_img, max_shapes=100, chromo_data=None, shapes_list =[]):
         self.real_img = real_img
         self.img_size = real_img.shape
         self.max_shapes = max_shapes
-        self.shapes_list = []
+        self.shapes_list = shapes_list
 
         if chromo_data is None:
             self.create_random_img()
@@ -125,8 +125,7 @@ class Generation:
                         break
         return selection_index[0], selection_index[1]
 
-
-    def assign_fitness(self):
+    def selection(self):
         p1, p2 = self.sampling()
         self.best_chromo, self.second_chromo = self.sorted_pop[p1], self.sorted_pop[p2]
         # self.best_chromo = self.sorted_pop[0]
@@ -135,7 +134,6 @@ class Generation:
     def evolution(self):
         # 최상위 Fitness 유전자 설정
         # 1위, 2위 개체 설정
-        self.assign_fitness()
 
         # 돌연변이 갯수 설정
         n_population = len(self.population)
@@ -144,7 +142,8 @@ class Generation:
 
         children = list()
         for num in range(n_population):
-            # 상위 1,2위로 자식을 만듬
+            #selection 함수 호출해서 전역 변수에 부모 두개 고름
+            self.selection()
             child = self.make_child()
             # 만든 자식들 중에 돌연변이를 만듬(circle을 덧댐)
             if num < mutation_cnt:
@@ -158,13 +157,44 @@ class Generation:
         sorted_pop = sorted(self.population, key=lambda x: x.fitness, reverse=True)
         return sorted_pop
 
+    def drawChild(self, child_shapes_list, new_img):
+        for child_shape in child_shapes_list:
+            if child_shape[0] == "circle":
+                center_x = child_shape[2]
+                center_y = child_shape[3]
+                radius = child_shape[4]
+                opacity = child_shape[5]
+                color = child_shape[6]
+                cv2.circle(new_img, (center_x, center_y), radius, color, -1)
+
+            elif child_shape[0] == "polygon":
+                pts = child_shape[1]
+                opacity = child_shape[5]
+                color = child_shape[6]
+                cv2.fillPoly(new_img, [pts], color, 8)
+
+    def one_point_xover(self, new_img):
+        random_point = np.random.randint(1, 99)
+        child_shapes_list = []
+        for temp_shapes in self.best_chromo.shapes_list[0:random_point]:
+            child_shapes_list.append(temp_shapes)
+        for temp_shapes in self.best_chromo.shapes_list[random_point:100]:
+            child_shapes_list.append(temp_shapes)
+        return child_shapes_list
+
     def make_child(self):#Xover 방식인데, 부모 두개를 임의의 투명도를 설정하여 합침.
         # 랜덤으로 첫번째 opacity(불투명) 비중설정
         ind1_weight = np.random.rand(1)[0]
         new_image = np.zeros((self.population[0].img_size), dtype=np.uint8)
-        #addWeighted(이미지1, 이미지1의 투명도, 이미지2, 1-이미지1의 투명도, 저장 대상)
-        cv2.addWeighted(self.best_chromo.img, ind1_weight, self.second_chromo.img, 1 - ind1_weight, 0, new_image)
-        child = chromoSome(real_img=self.best_chromo.real_img, chromo_data=new_image)
+        #self.best_chormo.img와 self.second_chromo.img 의 도형을 크로스 오버해야 함.
+        child_shapes_list = self.one_point_xover(new_image)
+        # #addWeighted(이미지1, 이미지1의 투명도, 이미지2, 1-이미지1의 투명도, 저장 대상)
+        # cv2.addWeighted(self.best_chromo.img, ind1_weight, self.second_chromo.img, 1 - ind1_weight, 0, new_image)
+
+        #그려야함
+        self.drawChild(child_shapes_list, new_image) #결과로 new_image에 child_shape_list 항목 그림.
+
+        child = chromoSome(real_img=self.best_chromo.real_img, chromo_data=new_image, shapes_list=child_shapes_list)
 
         return child
 

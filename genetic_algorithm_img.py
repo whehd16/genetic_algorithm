@@ -13,6 +13,8 @@ MUTATION_PROB = 0.1
 # Xover 방식은 미정
 # mutaion은 도형 및 색상 대체.
 
+#commit test
+
 class chromoSome:
     def __init__(self, real_img, max_shapes=100, chromo_data=None, shapes_list =[]):
         self.real_img = real_img

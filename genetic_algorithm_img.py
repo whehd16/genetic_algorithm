@@ -4,7 +4,7 @@ from tqdm import tqdm
 import cv2, time, argparse
 
 # 돌연변이 생성 비율
-MUTATION_PROB = 0.1
+MUTATION_PROB = 0.01
 
 # 각 세대는 100개의 해로 구성되도록 수정
 # 각 해는 100개의 원 또는 폴리곤으로 구성되어 있다.
@@ -129,6 +129,8 @@ class Generation:
 
     def selection(self):
         p1, p2 = self.sampling()
+        p
+        print(p1,p2)
         self.best_chromo, self.second_chromo = self.sorted_pop[p1], self.sorted_pop[p2]
         # self.best_chromo = self.sorted_pop[0]
         # self.second_chromo = self.sorted_pop[1]
@@ -144,12 +146,12 @@ class Generation:
 
         children = list()
         for num in range(n_population):
+            print(num, end = " ")
             #selection 함수 호출해서 전역 변수에 부모 두개 고름
             self.selection()
-            child = self.make_child()
-            # 만든 자식들 중에 돌연변이를 만듬(circle을 덧댐)
-            if num < mutation_cnt:
-                child = self.make_mutation(child)
+            print(self.best_chromo, self.second_chromo)
+            child = self.make_child(num)
+
             children.append(child)
 
         return Generation(children)
@@ -184,7 +186,7 @@ class Generation:
             child_shapes_list.append(temp_shapes)
         return child_shapes_list
 
-    def make_child(self):#Xover 방식인데, 부모 두개를 임의의 투명도를 설정하여 합침.
+    def make_child(self, num):#Xover 방식인데, 부모 두개를 임의의 투명도를 설정하여 합침.
         # 랜덤으로 첫번째 opacity(불투명) 비중설정
         ind1_weight = np.random.rand(1)[0]
         new_image = np.zeros((self.population[0].img_size), dtype=np.uint8)
@@ -193,31 +195,45 @@ class Generation:
         # #addWeighted(이미지1, 이미지1의 투명도, 이미지2, 1-이미지1의 투명도, 저장 대상)
         # cv2.addWeighted(self.best_chromo.img, ind1_weight, self.second_chromo.img, 1 - ind1_weight, 0, new_image)
 
+        #mutation 넣고 최종적으로 그리기
+        if np.random.randint(0, 101) == 5: # mutation 확률 0.01
+            child_shapes_list[np.random.randint(0,100)] = self.make_mutation(child_shapes_list)
+
         #그려야함
         self.drawChild(child_shapes_list, new_image) #결과로 new_image에 child_shape_list 항목 그림.
+
+        cv2.imwrite("./training_picaso/"+str(self.generation_lv)+"_"+str(num)+"_img.jpg", new_image)
 
         child = chromoSome(real_img=self.best_chromo.real_img, chromo_data=new_image, shapes_list=child_shapes_list)
 
         return child
 
-    def make_mutation(self, child):
-        overlay  = child.img.copy()
-        n_shapes = np.random.randint(1, 10)
+    def make_mutation(self, child_shapes_list):
+        print("mutation 발생")
+        if np.random.randint(0, 2) == 0:
+            center_x = np.random.randint(0, self.population[0].img_size[1])
+            center_y = np.random.randint(0, self.population[0].img_size[0])
+            radius = np.random.randint(0, self.population[0].img_size[0]/4)
+            opacity  = np.random.rand(1)[0]
+            color    = chromoSome.get_bgr_color()
+            return ["circle", None, center_x, center_y, radius, opacity, color] #원의 중심 좌표, 반지름, 투명도, 색상 반환
 
-        random_assign = random.choice([chromoSome.assign_circle, chromoSome.assign_polygon])
-        #circle, 또는 polygon을 추가하는 방식으로 mutation 구현
-        random_assign(child.img, n_shapes, child.img.shape)
+        else:
+            pts = []
+            point = [np.random.randint(0, self.population[0].img_size[1]), np.random.randint(0, self.population[0].img_size[0])]
+            pts.append(point)
 
-        # for _ in range(n_shapes):
-        #     center_x = np.random.randint(0, child.img.shape[1])
-        #     center_y = np.random.randint(0, child.img.shape[0])
-        #     radius = np.random.randint(0, child.img.shape[0]/4)
-        #     opacity  = np.random.rand(1)[0]
-        #     color    = chromoSome.get_bgr_color()
-        #     cv2.circle(overlay, (center_x, center_y), radius, color, -1)
-        #     cv2.addWeighted(overlay, opacity, child.img, 1 - opacity, 0, child.img)
+            n_shapes = np.random.randint(0, self.population[0].max_shapes)
 
-        return child
+            for i in range(n_shapes):
+                new_point = [point[0] + np.random.randint(-1, 2) * np.random.randint(0, int(img_size[1] / 4)), point[1] + np.random.randint(-1, 2) * np.random.randint(0, int(img_size[0] / 4))]
+                pts.append(new_point)
+
+            pts 	 = np.array(pts)
+            pts 	 = pts.reshape((-1, 1, 2))
+            opacity  = np.random.rand(1)[0]
+            color    = chromoSome.get_bgr_color()
+            return ["polygon", pts, None, None, None, opacity, color]
 
     @property
     def mean_fitness(self):
@@ -250,19 +266,18 @@ def main(file_path, n_population, n_generation):
     fitness_list = list()
     #초기해 생성 n_population 만큼 생성하고, choromSome 인스턴스 생성
     initial_pop = [chromoSome(real_img=IMA_ARR) for _ in range(n_population)]
+
     gen = Generation(initial_pop)
 
     #세대 수 : 10,000, 개체 수: 100
 
     try:
         for i in tqdm(range(n_generation)):
+            gen = gen.evolution()
+            best = gen.get_best
+            fitness_list.append(best.fitness)
 
-                gen = gen.evolution()
-                best = gen.get_best
-                fitness_list.append(best.fitness)
-
-                if i % 100 == 0:
-                    cv2.imwrite("./img_picaso/{}_img.jpg".format(i), best.img)
+            cv2.imwrite("./img_picaso/{}_img.jpg".format(i), best.img)
     finally:
         save_pickle(fitness_list, "./pickle_picaso/fitness_list")
         save_pickle(gen, "./pickle_picaso/last_generation")

@@ -14,18 +14,20 @@ MUTATION_PROB = 0.01
 # mutaion은 도형 및 색상 대체.
 
 #commit test
-
+initial_num = 0
 class chromoSome:
     def __init__(self, real_img, max_shapes=100, chromo_data=None, shapes_list =[]):
         self.real_img = real_img
         self.img_size = real_img.shape
         self.max_shapes = max_shapes
         self.shapes_list = shapes_list
-
+        global initial_num
         if chromo_data is None:
             self.create_random_img()
         else:
             self.img = chromo_data
+        # cv2.imwrite("./initial/"+str(initial_num)+"_img.jpg", self.img)
+        # initial_num+=1
 
     def __repr__(self):
         return "chromosome fitenss : {}".format(self.fitness)
@@ -69,7 +71,7 @@ class chromoSome:
         point = [np.random.randint(0, img_size[1]), np.random.randint(0, img_size[0])]
         pts.append(point)
 
-        n_shapes = np.random.randint(0, max_shapes)
+        n_shapes = np.random.randint(3, 5)
 
         for i in range(n_shapes):
             new_point = [point[0] + np.random.randint(-1, 2) * np.random.randint(0, int(img_size[1] / 4)), point[1] + np.random.randint(-1, 2) * np.random.randint(0, int(img_size[0] / 4))]
@@ -106,30 +108,37 @@ class Generation:
 
     def rangeArray(self, range_array):
         k = 3
-        k_related_fitness = [(((self.sorted_pop[-1].fitness - self.sorted_pop[i].fitness) + (self.sorted_pop[-1].fitness - self.sorted_pop[0].fitness)) / (k-1)) for i in range(len(self.sorted_pop))]
+        k_related_fitness = [(((self.sorted_pop[0].fitness - self.sorted_pop[i].fitness) + (self.sorted_pop[0].fitness - self.sorted_pop[-1].fitness)) / (k-1)) for i in range(len(self.sorted_pop))]
         range_array[0] = k_related_fitness[0]
+
         for i in range(1, len(self.population)):
             range_array[i] = range_array[i-1] + k_related_fitness[i]
+
         return range_array
 
     def sampling(self):
         temp_array = self.rangeArray([ 0 for _ in range(len(self.population))])
         selection_index = []
+        # print(temp_array[-1])
+        # print(temp_array)
+        # print('-----sampling------')
         while len(selection_index) != 2: # 부모해 2개 고르는 과정
 
             # value = rand()/(float)RAND_MAX*temp_array[-1]
-            value = random.uniform(0, temp_array[-1])
 
+            value = random.uniform(0, temp_array[-1])
+            # print(value)
             for i in range(len(temp_array)):
                 if value <= temp_array[i]:
                     if i not in selection_index:
                         selection_index.append(i)
                         break
+        # print('-----------')
         return selection_index[0], selection_index[1]
 
     def selection(self):
         p1, p2 = self.sampling()
-        p
+        print("selected index : ", end = ' ')
         print(p1,p2)
         self.best_chromo, self.second_chromo = self.sorted_pop[p1], self.sorted_pop[p2]
         # self.best_chromo = self.sorted_pop[0]
@@ -146,10 +155,9 @@ class Generation:
 
         children = list()
         for num in range(n_population):
-            print(num, end = " ")
+            print(num)
             #selection 함수 호출해서 전역 변수에 부모 두개 고름
             self.selection()
-            print(self.best_chromo, self.second_chromo)
             child = self.make_child(num)
 
             children.append(child)
@@ -180,10 +188,12 @@ class Generation:
     def one_point_xover(self, new_img):
         random_point = np.random.randint(1, 99)
         child_shapes_list = []
+        # print(self.best_chromo, self.second_chromo)
         for temp_shapes in self.best_chromo.shapes_list[0:random_point]:
             child_shapes_list.append(temp_shapes)
-        for temp_shapes in self.best_chromo.shapes_list[random_point:100]:
+        for temp_shapes in self.second_chromo.shapes_list[random_point:100]:
             child_shapes_list.append(temp_shapes)
+
         return child_shapes_list
 
     def make_child(self, num):#Xover 방식인데, 부모 두개를 임의의 투명도를 설정하여 합침.
@@ -194,9 +204,11 @@ class Generation:
         child_shapes_list = self.one_point_xover(new_image)
         # #addWeighted(이미지1, 이미지1의 투명도, 이미지2, 1-이미지1의 투명도, 저장 대상)
         # cv2.addWeighted(self.best_chromo.img, ind1_weight, self.second_chromo.img, 1 - ind1_weight, 0, new_image)
+        print("make_child")
+        print(self.best_chromo, self.second_chromo)
 
         #mutation 넣고 최종적으로 그리기
-        if np.random.randint(0, 101) == 5: # mutation 확률 0.01
+        if np.random.randint(0, 100) == 5: # mutation 확률 0.01
             child_shapes_list[np.random.randint(0,100)] = self.make_mutation(child_shapes_list)
 
         #그려야함
@@ -226,7 +238,7 @@ class Generation:
             n_shapes = np.random.randint(0, self.population[0].max_shapes)
 
             for i in range(n_shapes):
-                new_point = [point[0] + np.random.randint(-1, 2) * np.random.randint(0, int(img_size[1] / 4)), point[1] + np.random.randint(-1, 2) * np.random.randint(0, int(img_size[0] / 4))]
+                new_point = [point[0] + np.random.randint(-1, 2) * np.random.randint(0, int(self.population[0].img_size[1] / 4)), point[1] + np.random.randint(-1, 2) * np.random.randint(0, int(self.population[0].img_size[0] / 4))]
                 pts.append(new_point)
 
             pts 	 = np.array(pts)

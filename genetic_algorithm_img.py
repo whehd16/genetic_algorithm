@@ -2,7 +2,7 @@ import numpy as np
 import random, pickle
 from tqdm import tqdm
 import cv2, time, argparse
-
+import time
 # 돌연변이 생성 비율
 MUTATION_PROB = 0.01
 
@@ -24,10 +24,10 @@ class chromoSome:
         global initial_num
         if chromo_data is None:
             self.create_random_img()
+            cv2.imwrite("./initial/"+str(initial_num)+"_img.jpg", self.img)
+            initial_num+=1
         else:
             self.img = chromo_data
-        # cv2.imwrite("./initial/"+str(initial_num)+"_img.jpg", self.img)
-        # initial_num+=1
 
     def __repr__(self):
         return "chromosome fitenss : {}".format(self.fitness)
@@ -45,9 +45,13 @@ class chromoSome:
     def create_random_img(self):
         #초기해 생성을 위한 코드
         self.img = np.zeros(self.img_size, np.uint8)
+        temp_index = 0
+        self.shapes_list=[]
         for _ in range(self.max_shapes):
             random_assign = random.choice([chromoSome.assign_circle, chromoSome.assign_polygon])
-            self.shapes_list.append(random_assign(self.img, self.max_shapes, self.img_size))
+            temp_list = random_assign(self.img, self.max_shapes, self.img_size)
+            self.shapes_list.append(temp_list)
+
 
     def assign_circle(img, max_shapes, img_size):
         #초기해일 경우에 빈 프레임 들어옴
@@ -63,7 +67,7 @@ class chromoSome:
         color    = chromoSome.get_bgr_color()
         cv2.circle(overlay, (center_x, center_y), radius, color, -1) #img.copy에 중심x 중심y 반지름 색 그림.
         cv2.addWeighted(overlay, opacity, img, 1 - opacity, 0, img)  # img에 opacity, 1-opacity 만큼의 비율로 합쳐서 반환
-
+        # print(center_x, center_y, radius, opacity, color)
         return ["circle", None, center_x, center_y, radius, opacity, color] #원의 중심 좌표, 반지름, 투명도, 색상 반환
 
     def assign_polygon(img, max_shapes, img_size):
@@ -169,7 +173,8 @@ class Generation:
         sorted_pop = sorted(self.population, key=lambda x: x.fitness, reverse=True)
         return sorted_pop
 
-    def drawChild(self, child_shapes_list, new_img):
+    def drawChild(self, child_shapes_list, new_img, num):
+        temp_i = 0
         for child_shape in child_shapes_list:
             if child_shape[0] == "circle":
                 center_x = child_shape[2]
@@ -184,16 +189,22 @@ class Generation:
                 opacity = child_shape[5]
                 color = child_shape[6]
                 cv2.fillPoly(new_img, [pts], color, 8)
+            # temp_i += 1
+            # cv2.imwrite("./training_picaso/" + str(self.generation_lv) + "_" +str(num)+"_"+ str(temp_i) + "_img.jpg", new_img)
+        cv2.imwrite("./training_picaso/" + str(self.generation_lv) + "_" + str(num) + "_img.jpg", new_img)
 
     def one_point_xover(self, new_img):
         random_point = np.random.randint(1, 99)
         child_shapes_list = []
-        # print(self.best_chromo, self.second_chromo)
+
+        cv2.imwrite("./training_picaso/" + str(self.generation_lv) + "_parents1_img.jpg", self.best_chromo.img)
+        cv2.imwrite("./training_picaso/" + str(self.generation_lv)+"_parents2_img.jpg", self.second_chromo.img)
+
         for temp_shapes in self.best_chromo.shapes_list[0:random_point]:
             child_shapes_list.append(temp_shapes)
         for temp_shapes in self.second_chromo.shapes_list[random_point:100]:
             child_shapes_list.append(temp_shapes)
-
+        # print(child_shapes_list)
         return child_shapes_list
 
     def make_child(self, num):#Xover 방식인데, 부모 두개를 임의의 투명도를 설정하여 합침.
@@ -202,6 +213,7 @@ class Generation:
         new_image = np.zeros((self.population[0].img_size), dtype=np.uint8)
         #self.best_chormo.img와 self.second_chromo.img 의 도형을 크로스 오버해야 함.
         child_shapes_list = self.one_point_xover(new_image)
+
         # #addWeighted(이미지1, 이미지1의 투명도, 이미지2, 1-이미지1의 투명도, 저장 대상)
         # cv2.addWeighted(self.best_chromo.img, ind1_weight, self.second_chromo.img, 1 - ind1_weight, 0, new_image)
         print("make_child")
@@ -212,9 +224,7 @@ class Generation:
             child_shapes_list[np.random.randint(0,100)] = self.make_mutation(child_shapes_list)
 
         #그려야함
-        self.drawChild(child_shapes_list, new_image) #결과로 new_image에 child_shape_list 항목 그림.
-
-        cv2.imwrite("./training_picaso/"+str(self.generation_lv)+"_"+str(num)+"_img.jpg", new_image)
+        self.drawChild(child_shapes_list, new_image, num) #결과로 new_image에 child_shape_list 항목 그림.
 
         child = chromoSome(real_img=self.best_chromo.real_img, chromo_data=new_image, shapes_list=child_shapes_list)
 

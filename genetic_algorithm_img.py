@@ -61,7 +61,7 @@ class chromoSome:
 
         center_x = np.random.randint(0, img_size[1])
         center_y = np.random.randint(0, img_size[0])
-        radius = np.random.randint(0, img_size[0]/4)
+        radius = np.random.randint(0, img_size[0]/10)
         #radius   = np.random.randint(0, int(img_size[0] / (1.1*res)))
         opacity  = np.random.rand(1)[0]
         color    = chromoSome.get_bgr_color()
@@ -142,8 +142,8 @@ class Generation:
 
     def selection(self):
         p1, p2 = self.sampling()
-        print("selected index : ", end = ' ')
-        print(p1,p2)
+        # print("selected index : ", end = ' ')
+        # print(p1,p2)
         self.best_chromo, self.second_chromo = self.sorted_pop[p1], self.sorted_pop[p2]
         # self.best_chromo = self.sorted_pop[0]
         # self.second_chromo = self.sorted_pop[1]
@@ -159,7 +159,7 @@ class Generation:
 
         children = list()
         for num in range(n_population):
-            print(num)
+            # print(num)
             #selection 함수 호출해서 전역 변수에 부모 두개 고름
             self.selection()
             child = self.make_child(num)
@@ -216,10 +216,12 @@ class Generation:
 
         # #addWeighted(이미지1, 이미지1의 투명도, 이미지2, 1-이미지1의 투명도, 저장 대상)
         # cv2.addWeighted(self.best_chromo.img, ind1_weight, self.second_chromo.img, 1 - ind1_weight, 0, new_image)
-        print("make_child")
-        print(self.best_chromo, self.second_chromo)
+        # print("make_child")
+        # print(self.best_chromo, self.second_chromo)
 
         #mutation 넣고 최종적으로 그리기
+        #도형 중에 랜덤으로 바꾸기.
+
         if np.random.randint(0, 100) == 5: # mutation 확률 0.01
             child_shapes_list[np.random.randint(0,100)] = self.make_mutation(child_shapes_list)
 
@@ -231,7 +233,7 @@ class Generation:
         return child
 
     def make_mutation(self, child_shapes_list):
-        print("mutation 발생")
+        # print("mutation 발생")
         if np.random.randint(0, 2) == 0:
             center_x = np.random.randint(0, self.population[0].img_size[1])
             center_y = np.random.randint(0, self.population[0].img_size[0])

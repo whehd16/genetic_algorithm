@@ -11,9 +11,5 @@
 ``` python3 genetic_algorithm_img.py -np 100 -ng 10000 -path "Bigger-Splash.jpg" ```
 
 
-## Result
-
-
-Original           |  Genetic_algorithm
-:-------------------------:|:-------------------------:
-![](https://user-images.githubusercontent.com/42107709/71897023-a9190280-3198-11ea-9319-0b7d0897f2b1.png)| ![](https://drive.google.com/uc?export=view&id=1vqCTaIuBHU8dP1bMPbVwN4lpjI2oPRVP)
+## 2021.04~2021.06 forked 된 프로젝트에 유전알고리즘 파라미터 수정(crossover, mutation) 및 도형 수정한 프로젝트
+## 다양한 이미지 적용, Cifar-10 데이터 적용
